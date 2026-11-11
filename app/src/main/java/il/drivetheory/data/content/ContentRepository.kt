@@ -3,7 +3,9 @@ package il.drivetheory.data.content
 import android.content.res.AssetManager
 import il.drivetheory.core.model.Question
 import il.drivetheory.core.model.SignSection
+import il.drivetheory.data.settings.AppLanguage
 import il.drivetheory.data.settings.SettingsRepository
+import java.io.FileNotFoundException
 import il.drivetheory.di.IoDispatcher
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,34 +41,50 @@ class ContentRepository @Inject constructor(
         }.sorted()
     }
 
+    /**
+     * All questions in [language]; questions it lacks (or the whole pool, if the language is not
+     * bundled) come from [AppLanguage.FALLBACK].
+     */
     suspend fun allQuestions(language: String): List<Question> = mutex.withLock {
         questionsCache.getOrPut(language) {
-            read(ContentAssets.questions(language), QuestionsFileDto.serializer())
-                .questions.map { it.toModel() }
+            val fallback = readQuestions(AppLanguage.FALLBACK)!!
+            if (language == AppLanguage.FALLBACK) fallback
+            else readQuestions(language)?.withFallback(fallback) ?: fallback
         }
     }
 
+    /** Sign sections in [language]; missing meanings and titles come from [AppLanguage.FALLBACK]. */
     suspend fun signSections(language: String): List<SignSection> = mutex.withLock {
         signsCache.getOrPut(language) {
-            buildSignSections(
-                read(ContentAssets.SIGN_CATALOG, SignCatalogDto.serializer()),
-                read(ContentAssets.signTexts(language), SignTextsDto.serializer()),
-            )
+            val fallback = readOrNull(ContentAssets.signTexts(AppLanguage.FALLBACK), SignTextsDto.serializer())!!
+            val texts = if (language == AppLanguage.FALLBACK) fallback
+            else readOrNull(ContentAssets.signTexts(language), SignTextsDto.serializer())?.withFallback(fallback) ?: fallback
+            buildSignSections(read(ContentAssets.SIGN_CATALOG, SignCatalogDto.serializer()), texts)
         }
     }
+
+    private suspend fun readQuestions(language: String): List<Question>? =
+        readOrNull(ContentAssets.questions(language), QuestionsFileDto.serializer())?.questions?.map { it.toModel() }
 
     /** Questions of the selected licence class in the selected language; re-emits on changes. */
     @OptIn(ExperimentalCoroutinesApi::class)
     fun questionPool(): Flow<List<Question>> =
-        combine(settings.contentLanguage, settings.licenseClass, ::Pair).flatMapLatest { (lang, license) ->
+        combine(settings.language, settings.licenseClass, ::Pair).flatMapLatest { (lang, license) ->
             flow { emit(allQuestions(lang).filter { license in it.licenses }) }
         }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun signSections(): Flow<List<SignSection>> =
-        settings.contentLanguage.flatMapLatest { lang -> flow { emit(signSections(lang)) } }
+        settings.language.flatMapLatest { lang -> flow { emit(signSections(lang)) } }
 
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
     private suspend fun <T> read(path: String, deserializer: DeserializationStrategy<T>): T =
         withContext(io) { assets.open(path).use { json.decodeFromStream(deserializer, it) } }
+
+    private suspend fun <T> readOrNull(path: String, deserializer: DeserializationStrategy<T>): T? =
+        try {
+            read(path, deserializer)
+        } catch (_: FileNotFoundException) {
+            null
+        }
 }

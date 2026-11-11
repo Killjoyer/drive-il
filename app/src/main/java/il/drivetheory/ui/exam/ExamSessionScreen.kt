@@ -47,6 +47,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import il.drivetheory.R
 import il.drivetheory.core.model.ExamRules
@@ -71,7 +72,13 @@ fun ExamSessionScreen(
     var confirmAbandon by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(state.finishedExamId) { state.finishedExamId?.let(onFinished) }
-    BackHandler(enabled = !state.loading && !state.notEnoughQuestions) { confirmAbandon = true }
+    val canLeaveFreely = state.notEnoughQuestions || state.interrupted
+    BackHandler(enabled = !state.loading && !canLeaveFreely) { confirmAbandon = true }
+    // The exam clock only runs while this screen is visible (paused when the phone is locked).
+    LifecycleResumeEffect(viewModel) {
+        viewModel.resumeClock()
+        onPauseOrDispose { viewModel.pauseClock() }
+    }
 
     Scaffold(
         topBar = {
@@ -82,7 +89,7 @@ fun ExamSessionScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { if (state.notEnoughQuestions) onAbandon() else confirmAbandon = true }) {
+                    IconButton(onClick = { if (canLeaveFreely) onAbandon() else confirmAbandon = true }) {
                         Icon(Icons.Filled.Close, stringResource(R.string.exam_abandon))
                     }
                 },
@@ -130,6 +137,11 @@ fun ExamSessionScreen(
             state.notEnoughQuestions -> EmptyState(
                 title = stringResource(R.string.exam_not_enough_title),
                 message = stringResource(R.string.exam_not_enough_message, ExamRules.QUESTION_COUNT),
+                modifier = Modifier.padding(padding),
+            )
+            state.interrupted -> EmptyState(
+                title = stringResource(R.string.exam_interrupted_title),
+                message = stringResource(R.string.exam_interrupted_message),
                 modifier = Modifier.padding(padding),
             )
             else -> ExamQuestionPage(state, viewModel::select, viewModel::goTo, Modifier.padding(padding))

@@ -112,6 +112,7 @@ private fun RulesCard(state: ExamHomeUiState.Ready, onStart: () -> Unit) {
                 stringResource(R.string.exam_rule_pass, ExamRules.PASS_MIN_CORRECT, ExamRules.MAX_MISTAKES),
                 stringResource(R.string.exam_rule_navigation),
                 stringResource(R.string.exam_rule_unanswered),
+                stringResource(R.string.exam_rule_pause),
                 stringResource(R.string.exam_rule_topics),
             ).forEach { rule ->
                 Row {

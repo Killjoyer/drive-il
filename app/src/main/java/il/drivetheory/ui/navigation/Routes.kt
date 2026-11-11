@@ -11,6 +11,7 @@ import kotlinx.serialization.Serializable
 @Serializable data object SignsRoute
 @Serializable data object SettingsRoute
 @Serializable data object AboutRoute
+@Serializable data object CreditsRoute
 
 /** What a practice session draws questions from. */
 sealed interface PracticeMode {

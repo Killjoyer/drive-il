@@ -33,6 +33,7 @@ import il.drivetheory.ui.exam.ExamSessionScreen
 import il.drivetheory.ui.practice.PracticeHomeScreen
 import il.drivetheory.ui.practice.PracticeSessionScreen
 import il.drivetheory.ui.settings.AboutScreen
+import il.drivetheory.ui.settings.CreditsScreen
 import il.drivetheory.ui.settings.SettingsScreen
 import il.drivetheory.ui.signs.SignsScreen
 import kotlin.reflect.KClass
@@ -113,9 +114,12 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                     },
                 )
             }
-            composable<SignsRoute> { SignsScreen() }
+            composable<SignsRoute> { SignsScreen(onOpenCredits = { navController.navigate(CreditsRoute) }) }
             composable<SettingsRoute> { SettingsScreen(onOpenAbout = { navController.navigate(AboutRoute) }) }
-            composable<AboutRoute> { AboutScreen(onBack = navController::popBackStack) }
+            composable<AboutRoute> {
+                AboutScreen(onBack = navController::popBackStack, onOpenCredits = { navController.navigate(CreditsRoute) })
+            }
+            composable<CreditsRoute> { CreditsScreen(onBack = navController::popBackStack) }
         }
     }
 }

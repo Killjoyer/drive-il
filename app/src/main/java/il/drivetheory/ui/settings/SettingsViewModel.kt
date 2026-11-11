@@ -6,10 +6,12 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import il.drivetheory.core.model.LicenseClass
 import il.drivetheory.data.backup.BackupRepository
+import il.drivetheory.data.backup.BackupTooLargeException
 import il.drivetheory.data.backup.ImportSummary
 import il.drivetheory.data.backup.InvalidBackupException
 import il.drivetheory.data.content.ContentRepository
 import il.drivetheory.data.progress.ProgressRepository
+import il.drivetheory.data.settings.AppLanguage
 import il.drivetheory.data.settings.SettingsRepository
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -26,8 +28,8 @@ import kotlinx.coroutines.launch
 
 data class SettingsUiState(
     val licenseClass: LicenseClass = LicenseClass.DEFAULT,
-    val language: String = SettingsRepository.DEFAULT_LANGUAGE,
-    /** Bundled content languages; the picker is shown only when there is a choice. */
+    val language: String = AppLanguage.DEFAULT,
+    /** Bundled languages (UI and content); the picker is shown only when there is a choice. */
     val availableLanguages: List<String> = emptyList(),
     val answeredQuestions: Int = 0,
     val examCount: Int = 0,
@@ -38,6 +40,7 @@ sealed interface SettingsMessage {
     data object Exported : SettingsMessage
     data class Imported(val summary: ImportSummary) : SettingsMessage
     data object InvalidFile : SettingsMessage
+    data class TooLarge(val limitMb: Int) : SettingsMessage
     data object Failed : SettingsMessage
     data object Reset : SettingsMessage
 }
@@ -56,7 +59,7 @@ class SettingsViewModel @Inject constructor(
     val messages: Flow<SettingsMessage> = _messages.receiveAsFlow()
 
     val uiState: StateFlow<SettingsUiState> = combine(
-        combine(settings.licenseClass, settings.contentLanguage, languages, ::Triple),
+        combine(settings.licenseClass, settings.language, languages, ::Triple),
         progress.stats, progress.examHistory, busy,
     ) { (license, language, available), stats, exams, isBusy ->
         SettingsUiState(license, language, available, stats.size, exams.size, isBusy)
@@ -64,7 +67,8 @@ class SettingsViewModel @Inject constructor(
 
     fun setLicenseClass(value: LicenseClass) = viewModelScope.launch { settings.setLicenseClass(value) }
 
-    fun setLanguage(value: String) = viewModelScope.launch { settings.setContentLanguage(value) }
+    /** The activity observes the language and recreates itself to apply it to the UI. */
+    fun setLanguage(value: String) = settings.setLanguage(value)
 
     fun export(uri: Uri) = runBusy { backup.export(uri); SettingsMessage.Exported }
 
@@ -80,6 +84,8 @@ class SettingsViewModel @Inject constructor(
             throw e
         } catch (_: InvalidBackupException) {
             SettingsMessage.InvalidFile
+        } catch (e: BackupTooLargeException) {
+            SettingsMessage.TooLarge(e.limitBytes / (1024 * 1024))
         } catch (_: Exception) {
             SettingsMessage.Failed
         } finally {

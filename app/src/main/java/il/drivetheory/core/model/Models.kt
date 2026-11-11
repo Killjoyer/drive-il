@@ -47,8 +47,24 @@ data class RoadSign(
     /** Official sign number, null for entries without one (some road markings). */
     val number: String?,
     val category: SignCategory,
-    val imagePaths: List<String>,
+    val images: List<SignImage>,
     val meaning: String,
+)
+
+/** A sign picture (asset path) and, for third-party artwork, how it must be credited. */
+data class SignImage(val path: String, val credit: ImageCredit?)
+
+/**
+ * Attribution of a third-party image following the Creative Commons "TASL" practice:
+ * title, author, source and licence, each linked where a link exists.
+ */
+data class ImageCredit(
+    val title: String,
+    val author: String?,
+    val authorUrl: String?,
+    val license: String,
+    val licenseUrl: String?,
+    val sourceUrl: String,
 )
 
 data class SignSection(

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import il.drivetheory.R
+import il.drivetheory.core.model.ImageCredit
 
 /** Picture shown inline; a single tap opens it full-screen with pinch / double-tap zoom. */
 @Composable
@@ -75,8 +77,9 @@ fun TappableImage(
     if (zoomed) ZoomImageDialog(path, contentDescription) { zoomed = false }
 }
 
+/** Full-screen picture with pinch / double-tap zoom; third-party artwork shows its [credit] at the bottom. */
 @Composable
-fun ZoomImageDialog(path: String, contentDescription: String?, onDismiss: () -> Unit) {
+fun ZoomImageDialog(path: String, contentDescription: String?, credit: ImageCredit? = null, onDismiss: () -> Unit) {
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
@@ -138,6 +141,19 @@ fun ZoomImageDialog(path: String, contentDescription: String?, onDismiss: () -> 
                     .padding(8.dp),
             ) {
                 Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close))
+            }
+            credit?.let {
+                CreditText(
+                    credit = it,
+                    color = Color.White.copy(alpha = 0.85f),
+                    linkColor = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .background(Color.Black.copy(alpha = 0.6f))
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                )
             }
         }
     }

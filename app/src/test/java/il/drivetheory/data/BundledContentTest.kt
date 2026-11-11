@@ -8,6 +8,8 @@ import il.drivetheory.data.content.SignCatalogDto
 import il.drivetheory.data.content.SignTextsDto
 import il.drivetheory.data.content.buildSignSections
 import il.drivetheory.data.content.toModel
+import il.drivetheory.data.content.withFallback
+import il.drivetheory.data.settings.AppLanguage
 import java.io.File
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -24,8 +26,25 @@ class BundledContentTest {
         .filter { File(it, "questions.json").exists() }.map { it.name }
 
     @Test
-    fun `russian content is bundled`() {
+    fun `english fallback and russian content are bundled`() {
+        assertTrue(AppLanguage.FALLBACK in languages())
         assertTrue("ru" in languages())
+    }
+
+    @Test
+    fun `every commons sign picture is credited`() {
+        val catalog = json.decodeFromString(SignCatalogDto.serializer(), File(assets, ContentAssets.SIGN_CATALOG).readText())
+        catalog.signs.flatMap { it.images }.forEach { file ->
+            val credit = catalog.credits[file]
+            assertTrue("credit of $file", credit != null)
+            credit!!
+            assertTrue("source of $file", credit.source.startsWith("https://commons.wikimedia.org/wiki/File:"))
+            assertTrue("licence of $file", credit.license.isNotBlank())
+            if (credit.license.startsWith("CC")) {
+                assertTrue("author of $file", !credit.author.isNullOrBlank())
+                assertTrue("licence link of $file", credit.licenseUrl?.startsWith("https://creativecommons.org/") == true)
+            }
+        }
     }
 
     @Test
@@ -50,14 +69,18 @@ class BundledContentTest {
     @Test
     fun `sign catalog is complete for every language`() {
         val catalog = json.decodeFromString(SignCatalogDto.serializer(), File(assets, ContentAssets.SIGN_CATALOG).readText())
+        val fallbackTexts = json.decodeFromString(
+            SignTextsDto.serializer(), File(assets, ContentAssets.signTexts(AppLanguage.FALLBACK)).readText(),
+        )
         for (lang in languages()) {
             val texts = json.decodeFromString(SignTextsDto.serializer(), File(assets, ContentAssets.signTexts(lang)).readText())
+                .withFallback(fallbackTexts)
             val sections = buildSignSections(catalog, texts)
             assertEquals(SignCategory.entries.toSet(), sections.map { it.category }.toSet())
             sections.flatMap { it.signs }.forEach { sign ->
                 assertTrue("meaning of ${sign.key}", sign.meaning.isNotBlank())
-                assertTrue("images of ${sign.key}", sign.imagePaths.isNotEmpty())
-                sign.imagePaths.forEach { assertTrue("image $it", File(assets, it).exists()) }
+                assertTrue("images of ${sign.key}", sign.images.isNotEmpty())
+                sign.images.forEach { assertTrue("image ${it.path}", File(assets, it.path).exists()) }
             }
         }
     }

@@ -67,6 +67,11 @@ android {
     packaging {
         resources.excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "DebugProbesKt.bin")
     }
+
+    bundle {
+        // The language is switched inside the app, so every UI language must be in every install.
+        language { enableSplit = false }
+    }
 }
 
 kotlin {

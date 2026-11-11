@@ -50,6 +50,8 @@ data class ExamAnswerRecord(
 
 class InvalidBackupException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
+class BackupTooLargeException(val limitBytes: Int) : Exception("Backup file exceeds $limitBytes bytes")
+
 object BackupCodec {
     private val json = Json {
         prettyPrint = false

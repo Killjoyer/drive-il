@@ -12,6 +12,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -24,7 +25,7 @@ import il.drivetheory.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AboutScreen(onBack: () -> Unit) {
+fun AboutScreen(onBack: () -> Unit, onOpenCredits: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -50,6 +51,7 @@ fun AboutScreen(onBack: () -> Unit) {
             AboutBlock(R.string.about_disclaimer_title, R.string.about_disclaimer)
             AboutBlock(R.string.about_questions_title, R.string.about_questions)
             AboutBlock(R.string.about_signs_title, R.string.about_signs)
+            OutlinedButton(onClick = onOpenCredits) { Text(stringResource(R.string.credits_title)) }
             AboutBlock(R.string.about_privacy_title, R.string.about_privacy)
         }
     }

@@ -32,6 +32,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,11 +46,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import il.drivetheory.R
 import il.drivetheory.core.model.RoadSign
+import il.drivetheory.core.model.SignImage
 import il.drivetheory.ui.components.AssetImage
 import il.drivetheory.ui.components.EmptyState
 import il.drivetheory.ui.components.LoadingBox
@@ -57,11 +60,11 @@ import il.drivetheory.ui.components.ZoomImageDialog
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun SignsScreen(viewModel: SignsViewModel = hiltViewModel()) {
+fun SignsScreen(onOpenCredits: () -> Unit, viewModel: SignsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     LaunchedEffect(state.selectedCategory) { listState.scrollToItem(0) }
-    var zoomPath by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var zoomed by remember { mutableStateOf<Pair<SignImage, String>?>(null) }
 
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_signs)) }) }) { padding ->
         if (state.loading) {
@@ -126,31 +129,42 @@ fun SignsScreen(viewModel: SignsViewModel = hiltViewModel()) {
                         }
                     }
                     items(section.signs, key = { it.key }) { sign ->
-                        SignRow(sign, onZoom = { path -> zoomPath = path to sign.meaning })
+                        SignRow(sign, onZoom = { image -> zoomed = image to sign.meaning })
+                    }
+                }
+                if (state.sections.isNotEmpty()) {
+                    item(key = "credits") {
+                        TextButton(onClick = onOpenCredits, modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                stringResource(R.string.signs_images_credit),
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
                 }
             }
         }
     }
-    zoomPath?.let { (path, description) -> ZoomImageDialog(path, description) { zoomPath = null } }
+    zoomed?.let { (image, description) -> ZoomImageDialog(image.path, description, image.credit) { zoomed = null } }
 }
 
 @Composable
-private fun SignRow(sign: RoadSign, onZoom: (String) -> Unit) {
+private fun SignRow(sign: RoadSign, onZoom: (SignImage) -> Unit) {
     OutlinedCard(Modifier.fillMaxWidth()) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                sign.imagePaths.take(2).forEachIndexed { i, path ->
+                sign.images.take(2).forEachIndexed { i, image ->
                     if (i > 0) Spacer(Modifier.height(6.dp))
                     AssetImage(
-                        path = path,
+                        path = image.path,
                         contentDescription = stringResource(R.string.sign_image_description, sign.number ?: ""),
                         modifier = Modifier
                             .size(76.dp)
                             .clip(RoundedCornerShape(8.dp))
                             // Sign artwork is transparent and drawn for a white background (also in dark theme).
                             .background(Color.White)
-                            .clickable(onClickLabel = stringResource(R.string.image_zoom_action)) { onZoom(path) },
+                            .clickable(onClickLabel = stringResource(R.string.image_zoom_action)) { onZoom(image) },
                     )
                 }
             }

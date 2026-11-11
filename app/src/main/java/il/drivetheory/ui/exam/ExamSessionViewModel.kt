@@ -15,7 +15,10 @@ import il.drivetheory.data.settings.SettingsRepository
 import il.drivetheory.domain.ExamGenerator
 import il.drivetheory.domain.shuffledOptionOrder
 import java.time.Clock
+import kotlin.time.Duration
+import kotlin.time.TimeSource
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,6 +37,8 @@ data class ExamSessionUiState(
     val currentIndex: Int = 0,
     val remainingMillis: Long = ExamRules.DURATION.inWholeMilliseconds,
     val notEnoughQuestions: Boolean = false,
+    /** The app was killed during the exam; it is not resumed. */
+    val interrupted: Boolean = false,
     val saving: Boolean = false,
     /** Set once the exam is saved; the UI then navigates to the result. */
     val finishedExamId: Long? = null,
@@ -45,8 +50,12 @@ data class ExamSessionUiState(
 }
 
 /**
- * Runs one exam. Its state lives in [SavedStateHandle] so an exam survives configuration changes
- * and process death; the clock keeps running while the app is in the background, as in the real test.
+ * Runs one exam. The clock only runs while the exam screen is in the foreground (see [resumeClock] /
+ * [pauseClock]), so locking the phone or switching apps pauses it.
+ *
+ * An exam is deliberately not restored after the process dies: [SavedStateHandle] only remembers
+ * that an exam was running, and a recreated view model reports [ExamSessionUiState.interrupted].
+ * Nothing of an unfinished exam is stored — per-question statistics only change when it is finished.
  */
 @HiltViewModel
 class ExamSessionViewModel @Inject constructor(
@@ -62,12 +71,21 @@ class ExamSessionViewModel @Inject constructor(
     val uiState: StateFlow<ExamSessionUiState> = _uiState.asStateFlow()
 
     private var finishing = false
+    private var license: LicenseClass = LicenseClass.DEFAULT
+
+    /** Exam time used before the current foreground stretch. */
+    private var elapsedBefore = Duration.ZERO
+    /** Start of the current foreground stretch, null while paused. */
+    private var runningSince: TimeSource.Monotonic.ValueTimeMark? = null
+    private var ticker: Job? = null
+    private var wantsClock = false
 
     init {
-        viewModelScope.launch {
-            if (savedState.get<IntArray>(KEY_IDS) == null) createExam() else restoreExam()
-            val state = _uiState.value
-            if (!state.notEnoughQuestions) runTimer()
+        if (savedState.get<Boolean>(KEY_RUNNING) == true) {
+            _uiState.update { it.copy(loading = false, interrupted = true) }
+        } else {
+            savedState[KEY_RUNNING] = true
+            viewModelScope.launch { createExam() }
         }
     }
 
@@ -77,70 +95,62 @@ class ExamSessionViewModel @Inject constructor(
             _uiState.update { it.copy(loading = false, notEnoughQuestions = true) }
             return
         }
+        license = settings.currentLicenseClass()
         val questions = generator.generate(pool)
-        val orders = questions.map { shuffledOptionOrder(it.answers.size) }
-        val now = clock.millis()
-        savedState[KEY_IDS] = questions.map { it.id }.toIntArray()
-        savedState[KEY_ORDERS] = orders.flatten().toIntArray()
-        savedState[KEY_SELECTED] = IntArray(questions.size) { NONE }
-        savedState[KEY_STARTED] = now
-        savedState[KEY_LANGUAGE] = settings.currentLanguage()
-        savedState[KEY_LICENSE] = settings.currentLicenseClass().code
-        savedState[KEY_INDEX] = 0
-        publish(questions, orders, List(questions.size) { null }, 0)
-    }
-
-    private suspend fun restoreExam() {
-        val ids = savedState.get<IntArray>(KEY_IDS)!!
-        val byId = content.allQuestions(savedState[KEY_LANGUAGE] ?: settings.currentLanguage()).associateBy { it.id }
-        val questions = ids.map { byId.getValue(it) }
-        val flatOrders = savedState.get<IntArray>(KEY_ORDERS)!!
-        var offset = 0
-        val orders = questions.map { q -> flatOrders.slice(offset until offset + q.answers.size).also { offset += q.answers.size } }
-        val selected = savedState.get<IntArray>(KEY_SELECTED)!!.map { if (it == NONE) null else it }
-        publish(questions, orders, selected, savedState[KEY_INDEX] ?: 0)
-    }
-
-    private fun publish(questions: List<Question>, orders: List<List<Int>>, selected: List<Int?>, index: Int) {
         _uiState.update {
             it.copy(
                 loading = false,
                 questions = questions,
-                optionOrders = orders,
-                selected = selected,
-                currentIndex = index,
-                remainingMillis = remaining(),
+                optionOrders = questions.map { q -> shuffledOptionOrder(q.answers.size) },
+                selected = List(questions.size) { null },
             )
+        }
+        if (wantsClock) resumeClock()
+    }
+
+    private fun elapsed(): Duration = elapsedBefore + (runningSince?.elapsedNow() ?: Duration.ZERO)
+    private fun remaining(): Long = (ExamRules.DURATION - elapsed()).inWholeMilliseconds.coerceAtLeast(0)
+
+    /** Called when the exam screen comes to the foreground. */
+    fun resumeClock() {
+        wantsClock = true
+        val state = _uiState.value
+        if (state.questions.isEmpty() || finishing || runningSince != null) return
+        runningSince = TimeSource.Monotonic.markNow()
+        ticker = viewModelScope.launch {
+            while (isActive) {
+                val left = remaining()
+                _uiState.update { it.copy(remainingMillis = left) }
+                if (left <= 0) {
+                    // Saved outside the ticker so pausing the clock cannot cancel the save.
+                    viewModelScope.launch { finish(timedOut = true) }
+                    return@launch
+                }
+                delay((left % 1000).takeIf { it > 0 } ?: 1000)
+            }
         }
     }
 
-    private fun deadline(): Long = (savedState.get<Long>(KEY_STARTED) ?: clock.millis()) + ExamRules.DURATION.inWholeMilliseconds
-    private fun remaining(): Long = (deadline() - clock.millis()).coerceAtLeast(0)
-
-    private suspend fun runTimer() {
-        while (viewModelScope.isActive && !finishing) {
-            val left = remaining()
-            _uiState.update { it.copy(remainingMillis = left) }
-            if (left <= 0) {
-                finish(timedOut = true)
-                return
-            }
-            delay((left % 1000).takeIf { it > 0 } ?: 1000)
-        }
+    /** Called when the exam screen leaves the foreground (screen locked, app switched, ...). */
+    fun pauseClock() {
+        wantsClock = false
+        if (finishing) return
+        runningSince?.let { elapsedBefore += it.elapsedNow() }
+        runningSince = null
+        ticker?.cancel()
+        ticker = null
+        _uiState.update { it.copy(remainingMillis = remaining()) }
     }
 
     fun select(originalIndex: Int) {
         val state = _uiState.value
-        if (state.loading || finishing) return
+        if (state.questions.isEmpty() || finishing) return
         val selected = state.selected.toMutableList().also { it[state.currentIndex] = originalIndex }
-        savedState[KEY_SELECTED] = selected.map { it ?: NONE }.toIntArray()
         _uiState.update { it.copy(selected = selected) }
     }
 
     fun goTo(index: Int) {
-        val state = _uiState.value
-        if (index !in state.questions.indices) return
-        savedState[KEY_INDEX] = index
+        if (index !in _uiState.value.questions.indices) return
         _uiState.update { it.copy(currentIndex = index) }
     }
 
@@ -152,30 +162,26 @@ class ExamSessionViewModel @Inject constructor(
     private suspend fun finish(timedOut: Boolean) {
         if (finishing) return
         finishing = true
+        val used = elapsed().coerceAtMost(ExamRules.DURATION).inWholeMilliseconds
+        runningSince = null
+        ticker?.cancel()
         val state = _uiState.value
         _uiState.update { it.copy(saving = true) }
-        val started = savedState.get<Long>(KEY_STARTED) ?: clock.millis()
+        val now = clock.millis()
         val id = progress.saveExam(
             CompletedExam(
-                licenseClass = savedState.get<String>(KEY_LICENSE)?.let(LicenseClass::fromCode) ?: LicenseClass.DEFAULT,
-                startedAt = started,
-                finishedAt = minOf(clock.millis(), deadline()),
+                licenseClass = license,
+                // Only time spent with the exam on screen counts.
+                startedAt = now - used,
+                finishedAt = now,
                 timedOut = timedOut,
                 items = state.questions.mapIndexed { i, q -> ExamItem(q, state.optionOrders[i], state.selected[i]) },
             ),
         )
-        savedState.remove<IntArray>(KEY_IDS)
         _uiState.update { it.copy(finishedExamId = id) }
     }
 
     private companion object {
-        const val NONE = -1
-        const val KEY_IDS = "exam_ids"
-        const val KEY_ORDERS = "exam_orders"
-        const val KEY_SELECTED = "exam_selected"
-        const val KEY_STARTED = "exam_started"
-        const val KEY_LANGUAGE = "exam_language"
-        const val KEY_LICENSE = "exam_license"
-        const val KEY_INDEX = "exam_index"
+        const val KEY_RUNNING = "exam_running"
     }
 }

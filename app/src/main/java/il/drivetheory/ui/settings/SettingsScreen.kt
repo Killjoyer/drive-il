@@ -76,6 +76,7 @@ fun SettingsScreen(
                     R.string.backup_imported, message.summary.questionCount, message.summary.examCount,
                 )
                 SettingsMessage.InvalidFile -> resources.getString(R.string.backup_invalid)
+                is SettingsMessage.TooLarge -> resources.getString(R.string.backup_too_large, message.limitMb)
                 SettingsMessage.Failed -> resources.getString(R.string.backup_failed)
                 SettingsMessage.Reset -> resources.getString(R.string.progress_reset_done)
             }
@@ -94,6 +95,30 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
         ) {
             if (state.busy) LinearProgressIndicator(Modifier.padding(horizontal = 16.dp))
+            if (state.availableLanguages.size > 1) {
+                SectionTitle(stringResource(R.string.settings_language))
+                Text(
+                    stringResource(R.string.settings_language_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+                Column(Modifier.selectableGroup()) {
+                    state.availableLanguages.forEach { lang ->
+                        val locale = Locale.forLanguageTag(lang)
+                        ListItem(
+                            headlineContent = { Text(locale.getDisplayLanguage(locale).replaceFirstChar { it.titlecase(locale) }) },
+                            leadingContent = { RadioButton(selected = state.language == lang, onClick = null) },
+                            modifier = Modifier.selectable(
+                                selected = state.language == lang,
+                                role = Role.RadioButton,
+                                onClick = { viewModel.setLanguage(lang) },
+                            ),
+                        )
+                    }
+                }
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            }
             SectionTitle(stringResource(R.string.settings_license))
             Text(
                 stringResource(R.string.settings_license_hint),
@@ -112,24 +137,6 @@ fun SettingsScreen(
                             onClick = { viewModel.setLicenseClass(license) },
                         ),
                     )
-                }
-            }
-            if (state.availableLanguages.size > 1) {
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                SectionTitle(stringResource(R.string.settings_language))
-                Column(Modifier.selectableGroup()) {
-                    state.availableLanguages.forEach { lang ->
-                        val locale = Locale.forLanguageTag(lang)
-                        ListItem(
-                            headlineContent = { Text(locale.getDisplayLanguage(locale).replaceFirstChar { it.titlecase(locale) }) },
-                            leadingContent = { RadioButton(selected = state.language == lang, onClick = null) },
-                            modifier = Modifier.selectable(
-                                selected = state.language == lang,
-                                role = Role.RadioButton,
-                                onClick = { viewModel.setLanguage(lang) },
-                            ),
-                        )
-                    }
                 }
             }
             HorizontalDivider(Modifier.padding(vertical = 8.dp))

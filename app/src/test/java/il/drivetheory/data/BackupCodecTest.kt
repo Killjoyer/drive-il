@@ -2,11 +2,14 @@ package il.drivetheory.data
 
 import il.drivetheory.data.backup.BackupCodec
 import il.drivetheory.data.backup.BackupFile
+import il.drivetheory.data.backup.BackupTooLargeException
 import il.drivetheory.data.backup.ExamAnswerRecord
 import il.drivetheory.data.backup.ExamRecord
 import il.drivetheory.data.backup.InvalidBackupException
 import il.drivetheory.data.backup.StatRecord
+import il.drivetheory.data.backup.readAtMost
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class BackupCodecTest {
@@ -40,6 +43,13 @@ class BackupCodecTest {
     @Test(expected = InvalidBackupException::class)
     fun `foreign json is rejected`() {
         BackupCodec.decode("""{"format":"something.else","version":1,"exported_at":0}""")
+    }
+
+    @Test
+    fun `reading stops at the size limit`() {
+        val data = ByteArray(1000) { 1 }
+        assertEquals(1000, data.inputStream().readAtMost(1000).size)
+        assertThrows(BackupTooLargeException::class.java) { data.inputStream().readAtMost(999) }
     }
 
     @Test(expected = InvalidBackupException::class)

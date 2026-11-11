@@ -17,8 +17,14 @@ Output (written into app/src/main/assets):
   img/q/<image>.webp                  question pictures
   img/s/<file>.webp                   sign pictures
 
-Adding a language: create i18n/<lang>/config.json + i18n/<lang>/signs.json, then run
-    python3 -I tools/pipeline/build_content.py <lang> [<lang> ...]
+
+Sign image attribution (author / licence / source page per Commons file) is fetched once from the
+Commons API into sources/commons_credits.json and written into content/signs.json ("credits").
+
+English is the fallback language: it must be complete, other languages may miss entries (the app
+then shows the English text). Adding a language: create i18n/<lang>/config.json +
+i18n/<lang>/signs.json, then run
+    python3 -I tools/pipeline/build_content.py en ru <lang>
 
 Requires: Python 3.10+, Pillow (with WebP support).
 """
@@ -92,6 +98,54 @@ def commons_original_urls(names: list[str]) -> dict[str, str]:
             info = page["imageinfo"][0]
             urls[title.replace(" ", "_")] = info.get("thumburl") or info["url"]
     return urls
+
+
+CREDIT_FIELDS = "Artist|Attribution|LicenseShortName|LicenseUrl"
+
+
+def plain_text(fragment: str) -> str:
+    text = re.sub(r"</li>\s*<li>", "; ", fragment)
+    text = re.sub(r"<[^>]+>", "", text)
+    return re.sub(r"\s+", " ", html.unescape(text)).strip(" ;")
+
+
+def single_link(fragment: str) -> str | None:
+    """The link of an author field that is exactly one link (a user page), otherwise None."""
+    m = re.fullmatch(r'\s*<a [^>]*href="([^"]+)"[^>]*>[^<]*</a>\s*', fragment)
+    if not m or "redlink=1" in m.group(1):
+        return None
+    url = html.unescape(m.group(1))
+    return "https:" + url if url.startswith("//") else url
+
+
+def commons_credits(names: list[str]) -> dict[str, dict]:
+    """TASL attribution (title, author, source, licence) for Commons files, cached in sources/."""
+    path = ROOT / "sources" / "commons_credits.json"
+    credits = json.loads(path.read_text("utf-8")) if path.exists() else {}
+    missing = [n for n in names if n not in credits]
+    for i in range(0, len(missing), 50):
+        query = urllib.parse.urlencode({
+            "action": "query", "prop": "imageinfo", "iiprop": "extmetadata|url", "format": "json",
+            "iiextmetadatafilter": CREDIT_FIELDS, "titles": "|".join("File:" + n for n in missing[i:i + 50])})
+        data = json.loads(fetch(f"{COMMONS_API}?{query}"))
+        normalized = {n["to"]: n["from"] for n in data["query"].get("normalized", [])}
+        for page in data["query"]["pages"].values():
+            name = normalized.get(page["title"], page["title"])[5:].replace(" ", "_")
+            info = page["imageinfo"][0]
+            meta = {k: v.get("value", "") for k, v in info.get("extmetadata", {}).items()}
+            # An explicit "Attribution" is how the author asked to be credited.
+            author_html = meta.get("Attribution") or meta.get("Artist") or ""
+            credits[name] = {
+                "title": name.rsplit(".", 1)[0].replace("_", " "),
+                "author": plain_text(author_html) or None,
+                "authorUrl": single_link(author_html),
+                "license": meta.get("LicenseShortName") or "Unknown",
+                "licenseUrl": meta.get("LicenseUrl") or None,
+                "source": info["descriptionurl"],
+            }
+        time.sleep(1)
+    path.write_text(json.dumps(credits, ensure_ascii=False, indent=1, sort_keys=True), "utf-8")
+    return credits
 
 
 def cached(name: str, url: str) -> bytes:
@@ -206,12 +260,15 @@ def sign_image(commons_name: str, urls: dict[str, str]) -> str:
     return target.name
 
 
+FALLBACK_LANG = "en"  # must be complete; the app shows it for anything missing in another language
 MARKINGS_REFERENCE_LANG = "ru"  # pool used to find "what does this marking mean" questions
 
 
-def build_sign_catalog(reference_questions: list[dict]) -> list[dict]:
+def build_sign_catalog(reference_questions: list[dict]) -> tuple[list[dict], dict[str, dict]]:
     master = json.loads((ROOT / "sources" / "signs_master_he.json").read_text("utf-8"))
     files = sorted({f for e in master for f in e["files"]})
+    file_credits = commons_credits(files)
+    credits = {}
     urls = {} if all((CACHE / "s" / f).exists() for f in files) else commons_original_urls(files)
     catalog = []
     for entry in sorted(master, key=lambda e: sign_sort_key(e["num"])):
@@ -221,6 +278,8 @@ def build_sign_catalog(reference_questions: list[dict]) -> list[dict]:
             "category": SIGN_CATEGORY_BY_DIGIT[entry["num"][0]],
             "images": [sign_image(f, urls) for f in entry["files"]],
         })
+        for f in entry["files"]:
+            credits[sign_image(f, urls)] = file_credits[f]
     # Road markings are barely covered by the Commons artwork; the official pool contains
     # "what does this marking mean" picture questions, which are added as catalog entries.
     for q in reference_questions:
@@ -228,7 +287,7 @@ def build_sign_catalog(reference_questions: list[dict]) -> list[dict]:
                 and re.match(r"Что (обозначает|означает)", q["text"])):
             catalog.append({"key": f"q{q['id']}", "number": None, "category": "ROAD_MARKINGS",
                             "images": [], "questionImage": q["image"], "questionId": q["id"]})
-    return catalog
+    return catalog, credits
 
 
 # ---------------------------------------------------------------- main
@@ -251,25 +310,28 @@ def main(langs: list[str]) -> None:
     reference = questions_by_lang.get(MARKINGS_REFERENCE_LANG) or build_questions(
         MARKINGS_REFERENCE_LANG,
         json.loads((ROOT / "i18n" / MARKINGS_REFERENCE_LANG / "config.json").read_text("utf-8")))
-    catalog = build_sign_catalog(reference)
-    write_json(ASSETS / "content" / "signs.json", {"categories": SIGN_CATEGORY_ORDER, "signs": catalog})
+    catalog, credits = build_sign_catalog(reference)
+    write_json(ASSETS / "content" / "signs.json",
+               {"categories": SIGN_CATEGORY_ORDER, "signs": catalog, "credits": credits})
 
     for lang in langs:
         tr = json.loads((ROOT / "i18n" / lang / "signs.json").read_text("utf-8"))
         by_id = {q["id"]: q for q in questions_by_lang[lang]}
         meanings = {}
         for s in catalog:
-            if "questionId" in s:
+            if "questionId" in s and s["questionId"] in by_id:
                 q = by_id[s["questionId"]]
                 meanings[s["key"]] = q["answers"][q["correct"]]
             elif s["key"] in tr["signs"]:
                 meanings[s["key"]] = tr["signs"][s["key"]]
+            elif lang == FALLBACK_LANG:
+                raise RuntimeError(f"[{lang}] missing text for sign {s['key']}")
             else:
-                raise RuntimeError(f"[{lang}] missing translation for sign {s['key']}")
+                print(f"[{lang}] no text for sign {s['key']}, the app falls back to {FALLBACK_LANG}")
         write_json(ASSETS / "content" / lang / "signs.json",
                    {"categories": tr["categories"], "meanings": meanings})
     print(f"signs: {len(catalog)} entries")
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:] or ["ru"])
+    main(sys.argv[1:] or [FALLBACK_LANG, "ru"])

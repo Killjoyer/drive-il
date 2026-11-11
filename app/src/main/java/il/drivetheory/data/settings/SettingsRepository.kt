@@ -1,13 +1,18 @@
 package il.drivetheory.data.settings
 
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import dagger.hilt.android.qualifiers.ApplicationContext
 import il.drivetheory.core.model.LicenseClass
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -15,30 +20,36 @@ import kotlinx.coroutines.flow.map
 @Singleton
 class SettingsRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>,
+    @ApplicationContext context: Context,
 ) {
+    private val languagePrefs = AppLanguage.prefs(context)
+
     val licenseClass: Flow<LicenseClass> = dataStore.data
         .map { prefs -> prefs[KEY_LICENSE]?.let(LicenseClass::fromCode) ?: LicenseClass.DEFAULT }
         .distinctUntilChanged()
 
-    /** Language of the question pool / sign meanings. Only Russian is bundled for now. */
-    val contentLanguage: Flow<String> = dataStore.data
-        .map { prefs -> prefs[KEY_LANGUAGE] ?: DEFAULT_LANGUAGE }
-        .distinctUntilChanged()
+    /** App language (UI and content), see [AppLanguage]. */
+    val language: Flow<String> = callbackFlow {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+            if (key == AppLanguage.KEY) trySend(prefs.getString(key, null) ?: AppLanguage.DEFAULT)
+        }
+        languagePrefs.registerOnSharedPreferenceChangeListener(listener)
+        send(languagePrefs.getString(AppLanguage.KEY, null) ?: AppLanguage.DEFAULT)
+        awaitClose { languagePrefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }.distinctUntilChanged()
 
     suspend fun currentLicenseClass(): LicenseClass = licenseClass.first()
-    suspend fun currentLanguage(): String = contentLanguage.first()
+    fun currentLanguage(): String = languagePrefs.getString(AppLanguage.KEY, null) ?: AppLanguage.DEFAULT
 
     suspend fun setLicenseClass(value: LicenseClass) {
         dataStore.edit { it[KEY_LICENSE] = value.code }
     }
 
-    suspend fun setContentLanguage(language: String) {
-        dataStore.edit { it[KEY_LANGUAGE] = language }
+    fun setLanguage(language: String) {
+        languagePrefs.edit().putString(AppLanguage.KEY, language).apply()
     }
 
     companion object {
-        const val DEFAULT_LANGUAGE = "ru"
         private val KEY_LICENSE = stringPreferencesKey("license_class")
-        private val KEY_LANGUAGE = stringPreferencesKey("content_language")
     }
 }

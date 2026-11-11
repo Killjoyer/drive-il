@@ -26,6 +26,18 @@ data class QuestionDto(
 data class SignCatalogDto(
     val categories: List<String>,
     val signs: List<SignDto>,
+    /** Attribution per sign image file name. */
+    val credits: Map<String, CreditDto> = emptyMap(),
+)
+
+@Serializable
+data class CreditDto(
+    val title: String,
+    val author: String? = null,
+    val authorUrl: String? = null,
+    val license: String,
+    val licenseUrl: String? = null,
+    val source: String,
 )
 
 @Serializable
