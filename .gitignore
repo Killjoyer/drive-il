@@ -1,0 +1,44 @@
+# Gradle / Kotlin
+.gradle/
+.kotlin/
+build/
+**/build/
+
+# Local machine config (SDK path)
+local.properties
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.fleet/
+captures/
+.navigation/
+
+# Native builds
+.externalNativeBuild/
+.cxx/
+
+# Build outputs, profiling, logs
+*.apk
+*.aab
+*.ap_
+*.dex
+*.hprof
+*.log
+output-metadata.json
+
+# Signing secrets
+*.jks
+*.keystore
+keystore.properties
+
+# Content pipeline download cache / Python
+tools/pipeline/.cache/
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db

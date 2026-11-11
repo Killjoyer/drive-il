@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Warning-triangle sign with a check mark, inside the 66dp adaptive-icon safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,27 C55.6,27 57,27.9 57.8,29.2 L80.4,70.6 C82,73.5 79.9,77 76.6,77 L31.4,77 C28.1,77 26,73.5 27.6,70.6 L50.2,29.2 C51,27.9 52.4,27 54,27 Z" />
+    <path
+        android:fillColor="#D32F2F"
+        android:pathData="M54,35 L74,72 L34,72 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,43 L67,67 L41,67 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#1E4FA3"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M47,58 L52,63 L61,52" />
+</vector>

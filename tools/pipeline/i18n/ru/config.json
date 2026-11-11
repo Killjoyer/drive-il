@@ -1,0 +1,11 @@
+{
+  "language": "ru",
+  "datastoreResourceId": "ca264280-1669-45ce-a96f-a4c9ed71e812",
+  "source": "data.gov.il — TheoryExamRU_DATA (Министерство транспорта Израиля)",
+  "topics": {
+    "Правила": "RULES",
+    "Безопасность": "SAFETY",
+    "Знаки и Разметка": "SIGNS",
+    "Элементы Конструкции T.C": "VEHICLE"
+  }
+}

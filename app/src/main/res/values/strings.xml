@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    UI strings. The default locale is Russian because the bundled content is Russian.
+    To add a UI language, add res/values-<lang>/strings.xml (and content via tools/pipeline).
+-->
+<resources>
+    <string name="app_name">Теория вождения</string>
+
+    <!-- Tabs -->
+    <string name="tab_practice">Тренировка</string>
+    <string name="tab_exam">Экзамен</string>
+    <string name="tab_signs">Знаки</string>
+    <string name="tab_settings">Настройки</string>
+
+    <!-- Common actions -->
+    <string name="action_back">Назад</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_clear">Очистить</string>
+    <string name="action_close">Закрыть</string>
+    <string name="action_next">Далее</string>
+    <string name="action_previous">Назад</string>
+    <string name="action_next_question">Следующий вопрос</string>
+    <string name="action_skip">Пропустить</string>
+
+    <!-- Topics -->
+    <string name="topic_rules">Правила движения</string>
+    <string name="topic_safety">Безопасность</string>
+    <string name="topic_signs">Знаки и разметка</string>
+    <string name="topic_vehicle">Устройство автомобиля</string>
+
+    <!-- Licence classes -->
+    <string name="license_b">B — легковой автомобиль</string>
+    <string name="license_a">A — мотоцикл</string>
+    <string name="license_1">1 — трактор</string>
+    <string name="license_c1">C1 — грузовик до 12 т</string>
+    <string name="license_c">C — грузовик свыше 12 т</string>
+    <string name="license_d">D — автобус</string>
+
+    <!-- Questions -->
+    <string name="question_number">№ %1$d</string>
+    <string name="question_image_description">Иллюстрация к вопросу</string>
+    <string name="image_tap_to_zoom">Нажмите на изображение, чтобы увеличить</string>
+    <string name="image_zoom_action">увеличить</string>
+    <!-- Labels of the four answer options, in order. -->
+    <string name="option_letters" translatable="false">абвг</string>
+    <string name="option_state_selected">выбран</string>
+    <string name="option_state_correct">правильный ответ</string>
+    <string name="option_state_wrong">неверный ответ</string>
+    <string name="feedback_correct">Верно!</string>
+    <string name="feedback_wrong">Неверно</string>
+    <string name="correct_answer_is">Правильный ответ: %1$s</string>
+    <string name="question_history">Ранее по этому вопросу: верно %1$d, ошибок %2$d</string>
+
+    <!-- Practice -->
+    <string name="practice_overall_title">Общий прогресс · категория %1$s</string>
+    <string name="practice_overall_hint">Выучено %1$d из %2$d вопросов (хотя бы раз отвечено верно)</string>
+    <string name="practice_all_topics">Все темы</string>
+    <string name="practice_by_topic">По темам</string>
+    <string name="practice_mistakes">Работа над ошибками</string>
+    <string name="practice_mistakes_none">Нет вопросов с ошибками</string>
+    <string name="learned_of">Выучено %1$d из %2$d</string>
+    <string name="practice_fixed_of">Исправлено %1$d из %2$d</string>
+    <string name="session_score">✓ %1$d   ✗ %2$d</string>
+    <string name="practice_done_title">Готово!</string>
+    <string name="practice_done_mistakes">Все ошибки исправлены. Отличная работа!</string>
+    <string name="practice_done_empty">В этом разделе нет вопросов для выбранной категории прав.</string>
+    <plurals name="open_mistakes">
+        <item quantity="one">%d вопрос с последним неверным ответом</item>
+        <item quantity="few">%d вопроса с последним неверным ответом</item>
+        <item quantity="many">%d вопросов с последним неверным ответом</item>
+        <item quantity="other">%d вопроса с последним неверным ответом</item>
+    </plurals>
+
+    <!-- Exam: home -->
+    <string name="exam_title">Пробный экзамен</string>
+    <string name="exam_license_pool">Категория %1$s · в базе %2$d вопросов</string>
+    <string name="exam_rule_questions">%1$d вопросов, у каждого 4 варианта ответа и только один верный</string>
+    <string name="exam_rule_time">На весь экзамен даётся %1$d минут</string>
+    <string name="exam_rule_pass">Экзамен сдан при %1$d и более правильных ответах (допускается не более %2$d ошибок)</string>
+    <string name="exam_rule_navigation">Можно переходить между вопросами и менять ответ до завершения экзамена</string>
+    <string name="exam_rule_unanswered">Вопрос без ответа засчитывается как ошибка; по истечении времени экзамен завершается автоматически</string>
+    <string name="exam_rule_topics">Вопросы выбираются случайно из официальной базы для вашей категории прав, темы — пропорционально их доле в базе</string>
+    <string name="exam_start">Начать экзамен</string>
+    <string name="exam_history">История экзаменов</string>
+    <string name="exam_history_summary">Попыток: %1$d · сдано: %2$d · сдано из последних 5: %3$d%%</string>
+    <string name="exam_history_item">%1$d из %2$d · категория %3$s</string>
+    <string name="exam_passed_short">Сдан</string>
+    <string name="exam_failed_short">Не сдан</string>
+
+    <!-- Exam: session -->
+    <string name="exam_question_of">Вопрос %1$d из %2$d</string>
+    <string name="exam_finish">Завершить</string>
+    <string name="exam_continue">Продолжить</string>
+    <string name="exam_finish_confirm_title">Завершить экзамен?</string>
+    <string name="exam_finish_confirm_all">Вы ответили на все вопросы.</string>
+    <plurals name="exam_unanswered_warning">
+        <item quantity="one">Остался %d вопрос без ответа. Он будет засчитан как ошибка.</item>
+        <item quantity="few">Осталось %d вопроса без ответа. Они будут засчитаны как ошибки.</item>
+        <item quantity="many">Осталось %d вопросов без ответа. Они будут засчитаны как ошибки.</item>
+        <item quantity="other">Осталось %d вопроса без ответа. Они будут засчитаны как ошибки.</item>
+    </plurals>
+    <string name="exam_abandon">Прервать</string>
+    <string name="exam_abandon_title">Прервать экзамен?</string>
+    <string name="exam_abandon_message">Ответы не будут сохранены, а результат не попадёт в историю.</string>
+    <string name="exam_answered_count">Отвечено %1$d из %2$d</string>
+    <string name="exam_time_left_description">Осталось времени: %1$s</string>
+    <string name="exam_nav_answered">Вопрос %1$d, отвечен</string>
+    <string name="exam_nav_unanswered">Вопрос %1$d, без ответа</string>
+    <string name="exam_not_enough_title">Недостаточно вопросов</string>
+    <string name="exam_not_enough_message">Для экзамена нужно не менее %1$d вопросов выбранной категории.</string>
+
+    <!-- Exam: result -->
+    <string name="exam_result_title">Результат экзамена</string>
+    <string name="exam_passed">Экзамен сдан</string>
+    <string name="exam_failed">Экзамен не сдан</string>
+    <string name="exam_score">Правильных ответов: %1$d из %2$d</string>
+    <string name="exam_mistakes_line">Ошибок: %1$d (допускается не более %2$d)</string>
+    <string name="exam_time_used">Затрачено времени: %1$s из %2$d:00</string>
+    <string name="exam_timed_out">Время истекло — экзамен завершён автоматически.</string>
+    <string name="exam_license_line">Категория %1$s · %2$s</string>
+    <string name="exam_by_topic">По темам</string>
+    <string name="exam_new">Новый экзамен</string>
+    <string name="filter_wrong">Ошибки (%1$d)</string>
+    <string name="filter_correct">Верные (%1$d)</string>
+    <string name="filter_all">Все (%1$d)</string>
+    <string name="exam_result_no_items">Нет вопросов для этого фильтра.</string>
+    <string name="exam_result_missing_title">Экзамен не найден</string>
+    <string name="exam_result_missing">Возможно, прогресс был сброшен или заменён импортом.</string>
+    <string name="result_item_correct">Вопрос %1$d · верно</string>
+    <string name="result_item_wrong">Вопрос %1$d · ошибка</string>
+    <string name="result_item_unanswered">Вопрос %1$d · нет ответа</string>
+    <string name="explanation_title">Разбор</string>
+    <string name="explanation_correct">Вы выбрали правильный ответ: «%1$s».</string>
+    <string name="explanation_wrong">Вы выбрали «%1$s» — это неверно. Правильный ответ по официальному ключу Министерства транспорта: «%2$s».</string>
+    <string name="explanation_unanswered">Вы не ответили на этот вопрос, поэтому он засчитан как ошибка. Правильный ответ: «%1$s».</string>
+
+    <!-- Signs -->
+    <string name="signs_search_hint">Номер знака или слово</string>
+    <string name="signs_all">Все</string>
+    <string name="signs_nothing_found_title">Ничего не найдено</string>
+    <string name="signs_nothing_found">Попробуйте изменить запрос или категорию.</string>
+    <string name="sign_number">Знак %1$s</string>
+    <string name="sign_image_description">Дорожный знак %1$s</string>
+
+    <!-- Settings -->
+    <string name="settings_license">Категория прав</string>
+    <string name="settings_license_hint">Тренировка и экзамен используют только вопросы, которые входят в экзамен выбранной категории.</string>
+    <string name="settings_language">Язык вопросов</string>
+    <string name="settings_progress">Прогресс</string>
+    <string name="settings_progress_summary">Вопросов с ответами: %1$d · экзаменов: %2$d. Всё хранится только на этом устройстве.</string>
+    <string name="backup_export">Экспорт прогресса</string>
+    <string name="backup_export_hint">Сохранить файл, чтобы перенести прогресс на другое устройство</string>
+    <string name="backup_import">Импорт прогресса</string>
+    <string name="backup_import_hint">Загрузить прогресс из файла экспорта</string>
+    <string name="backup_import_confirm">Текущий прогресс и история экзаменов будут заменены данными из файла. Продолжить?</string>
+    <string name="backup_import_choose">Выбрать файл</string>
+    <string name="backup_exported">Прогресс сохранён в файл</string>
+    <string name="backup_imported">Импортировано: вопросов — %1$d, экзаменов — %2$d</string>
+    <string name="backup_invalid">Файл не похож на экспорт прогресса этого приложения</string>
+    <string name="backup_failed">Не удалось выполнить операцию с файлом</string>
+    <string name="progress_reset">Сбросить прогресс</string>
+    <string name="progress_reset_confirm">Вся статистика ответов и история экзаменов будут удалены без возможности восстановления.</string>
+    <string name="progress_reset_action">Сбросить</string>
+    <string name="progress_reset_done">Прогресс сброшен</string>
+
+    <!-- About -->
+    <string name="about_title">О приложении и источниках</string>
+    <string name="about_hint">Источники данных, лицензии, конфиденциальность</string>
+    <string name="about_version">Версия %1$s</string>
+    <string name="about_disclaimer_title">Неофициальное приложение</string>
+    <string name="about_disclaimer">Приложение не связано с Министерством транспорта Израиля. Оно помогает готовиться к теоретическому экзамену по официальной базе вопросов. Актуальные правила экзамена уточняйте на gov.il.</string>
+    <string name="about_questions_title">Вопросы</string>
+    <string name="about_questions">Официальная база вопросов и ответов теоретического экзамена на русском языке, опубликованная Министерством транспорта и безопасности дорожного движения Израиля на портале открытых данных data.gov.il. Иллюстрации — с gov.il. В официальной базе нет письменных объяснений, поэтому разбор показывает выбранный и правильный ответы.</string>
+    <string name="about_signs_title">Дорожные знаки</string>
+    <string name="about_signs">Номера, категории и значения — по официальной таблице дорожных знаков Израиля (перевод на русский выполнен для приложения). Изображения знаков — Wikimedia Commons (общественное достояние, а также CC BY-SA 3.0/4.0 от участников Wikimedia Commons). Изображения разметки — из официальной базы вопросов.</string>
+    <string name="about_privacy_title">Конфиденциальность</string>
+    <string name="about_privacy">Приложение работает полностью офлайн и не запрашивает доступ к интернету. Прогресс хранится только на устройстве и переносится вручную через экспорт и импорт файла.</string>
+</resources>
